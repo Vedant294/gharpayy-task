@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2, AlertTriangle, Phone, Mail, MapPin, IndianRupee, User, StickyNote, Sparkles, PenLine } from 'lucide-react';
-import { useCreateLead, useAgents } from '@/hooks/useCrmData';
+import { useCreateLead, useAgents, calculateLeadScore } from '@/hooks/useCrmData';
 import { SOURCE_LABELS } from '@/types/crm';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,6 +85,14 @@ const QuickAddLead = () => {
       return;
     }
     try {
+      const initialScore = calculateLeadScore({
+        phone: (mode === 'smart' ? (parsed?.phone || form.phone) : form.phone).trim(),
+        email: (mode === 'smart' ? (parsed?.email || form.email) : form.email).trim() || null,
+        budget: (mode === 'smart' ? (parsed?.budget || form.budget) : form.budget).trim() || null,
+        preferred_location: (mode === 'smart' ? (parsed?.preferred_location || form.preferred_location) : form.preferred_location).trim() || null,
+        status: 'new',
+        first_response_time_min: null,
+      });
       await createLead.mutateAsync({
         name: name.trim(),
         phone: phone.trim(),
@@ -95,6 +103,7 @@ const QuickAddLead = () => {
         notes: (mode === 'smart' ? (parsed?.notes || form.notes) : form.notes).trim() || null,
         assigned_agent_id: getAutoAgent(),
         status: 'new',
+        lead_score: initialScore,
       });
       toast.success('Lead created!');
       setOpen(false);

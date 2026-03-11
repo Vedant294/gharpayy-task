@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, AlertTriangle, Sparkles, Phone, Mail, MapPin, IndianRupee, User, StickyNote } from 'lucide-react';
-import { useCreateLead, useAgents } from '@/hooks/useCrmData';
+import { useCreateLead, useAgents, calculateLeadScore } from '@/hooks/useCrmData';
 import { SOURCE_LABELS } from '@/types/crm';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,6 +58,14 @@ const AddLeadDialog = () => {
     }
     try {
       const agentId = form.assigned_agent_id || agents?.[0]?.id || null;
+      const initialScore = calculateLeadScore({
+        phone: form.phone,
+        email: form.email,
+        budget: form.budget,
+        preferred_location: form.preferred_location,
+        status: 'new',
+        first_response_time_min: null,
+      });
       await createLead.mutateAsync({
         name: form.name,
         phone: form.phone,
@@ -68,6 +76,7 @@ const AddLeadDialog = () => {
         notes: form.notes || null,
         assigned_agent_id: agentId,
         status: 'new',
+        lead_score: initialScore,
       });
       toast.success('Lead created successfully!');
       setOpen(false);

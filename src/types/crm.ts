@@ -27,6 +27,7 @@ export type PipelineStage =
   | 'property_suggested'
   | 'visit_scheduled'
   | 'visit_completed'
+  | 'negotiation'
   | 'booked'
   | 'lost';
 
@@ -61,6 +62,7 @@ export const PIPELINE_STAGES: { key: PipelineStage; label: string; color: string
   { key: 'property_suggested', label: 'Property Suggested', color: 'bg-pipeline-suggested' },
   { key: 'visit_scheduled', label: 'Visit Scheduled', color: 'bg-pipeline-visit-scheduled' },
   { key: 'visit_completed', label: 'Visit Completed', color: 'bg-pipeline-visit-completed' },
+  { key: 'negotiation', label: 'Negotiation', color: 'bg-pipeline-negotiation' },
   { key: 'booked', label: 'Booked', color: 'bg-pipeline-booked' },
   { key: 'lost', label: 'Lost', color: 'bg-pipeline-lost' },
 ];

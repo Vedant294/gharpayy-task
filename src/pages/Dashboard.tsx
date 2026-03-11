@@ -1,7 +1,7 @@
 import AppLayout from '@/components/AppLayout';
 import KpiCard from '@/components/KpiCard';
 import OnboardingCard from '@/components/OnboardingCard';
-import { useDashboardStats, useLeads, useAgentStats } from '@/hooks/useCrmData';
+import { useDashboardStats, useLeads, useAgentStats, calculateLeadScore } from '@/hooks/useCrmData';
 import { useAllReminders, useCompleteFollowUp } from '@/hooks/useLeadDetails';
 import { useBookingStats } from '@/hooks/useBookings';
 import { PIPELINE_STAGES, SOURCE_LABELS } from '@/types/crm';
@@ -63,7 +63,7 @@ const Dashboard = () => {
     : [];
 
   const newLeads = leads?.filter(l => l.status === 'new') || [];
-  const hotLeads = leads?.filter(l => ((l as any).lead_score ?? 0) >= 70).slice(0, 5) || [];
+  const hotLeads = leads?.filter(l => calculateLeadScore(l) >= 70).slice(0, 5) || [];
   const overdueReminders = reminders?.filter(r => isPast(new Date(r.reminder_date))) || [];
 
   const handleComplete = async (id: string) => {

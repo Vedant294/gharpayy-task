@@ -71,6 +71,7 @@
     --pipeline-suggested: 25 50% 50%;
     --pipeline-visit-scheduled: 173 40% 42%;
     --pipeline-visit-completed: 152 40% 42%;
+    --pipeline-negotiation: 45 85% 50%;
     --pipeline-booked: 152 50% 35%;
     --pipeline-lost: 0 40% 50%;
 

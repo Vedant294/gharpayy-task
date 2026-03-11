@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PIPELINE_STAGES, SOURCE_LABELS } from '@/types/crm';
-import { useUpdateLead, useAgents, type LeadWithRelations } from '@/hooks/useCrmData';
+import { useUpdateLead, useAgents, type LeadWithRelations, calculateLeadScore } from '@/hooks/useCrmData';
 import { useConversations, useFollowUps, useCreateFollowUp } from '@/hooks/useLeadDetails';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { useBookingsByLead } from '@/hooks/useBookings';
@@ -73,7 +73,7 @@ const LeadDetailDrawer = ({ lead, open, onClose }: Props) => {
   if (!lead) return null;
 
   const stage = PIPELINE_STAGES.find(s => s.key === lead.status);
-  const score = (lead as any).lead_score ?? 0;
+  const score = calculateLeadScore(lead);
 
   const handleStatusChange = async (status: string) => {
     try {

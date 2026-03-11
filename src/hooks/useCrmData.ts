@@ -64,6 +64,21 @@ export const useLeadsByStatus = (status: string) =>
     },
   });
 
+export const useLeadsByAgent = (agentId?: string) =>
+  useQuery({
+    queryKey: ['leads', 'agent', agentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*, agents(id, name), properties(id, name)')
+        .eq('assigned_agent_id', agentId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as LeadWithRelations[];
+    },
+    enabled: !!agentId,
+  });
+
 export const useCreateLead = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -187,7 +202,7 @@ export const useAgentStats = () =>
     queryFn: async () => {
       const [agentsRes, leadsRes] = await Promise.all([
         supabase.from('agents').select('*').eq('is_active', true),
-        supabase.from('leads').select('id, status, assigned_agent_id, first_response_time_min'),
+        supabase.from('leads').select('id, status, assigned_agent_id, first_response_time_min, lead_score'),
       ]);
       if (agentsRes.error) throw agentsRes.error;
       if (leadsRes.error) throw leadsRes.error;
@@ -209,3 +224,34 @@ export const useAgentStats = () =>
       });
     },
   });
+
+// Calculate lead score based on various factors
+export const calculateLeadScore = (lead: any): number => {
+  let score = 0;
+  
+  // Phone provided → +10
+  if (lead.phone) score += 10;
+  
+  // Email provided → +5
+  if (lead.email) score += 5;
+  
+  // Budget provided → +10
+  if (lead.budget) score += 10;
+  
+  // Location provided → +10
+  if (lead.preferred_location) score += 10;
+  
+  // Visit scheduled → +20
+  if (lead.status === 'visit_scheduled' || lead.status === 'visit_completed') score += 20;
+  
+  // Negotiation stage → +15
+  if (lead.status === 'negotiation') score += 15;
+  
+  // Booked → +30
+  if (lead.status === 'booked') score += 30;
+  
+  // First response time bonus (if <= 5 min) → +10
+  if (lead.first_response_time_min !== null && lead.first_response_time_min <= 5) score += 10;
+  
+  return Math.min(score, 100);
+};

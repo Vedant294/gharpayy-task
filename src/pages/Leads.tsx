@@ -4,9 +4,9 @@ import AddLeadDialog from '@/components/AddLeadDialog';
 import LeadDetailDrawer from '@/components/LeadDetailDrawer';
 import { useLeadsPaginated } from '@/hooks/useCrmData';
 import { useBulkUpdateLeads, useDeleteLeads } from '@/hooks/useLeadDetails';
-import { useUpdateLead, useAgents, type LeadWithRelations } from '@/hooks/useCrmData';
+import { useUpdateLead, useAgents, type LeadWithRelations, calculateLeadScore } from '@/hooks/useCrmData';
 import { PIPELINE_STAGES, SOURCE_LABELS } from '@/types/crm';
-import { Filter, Download, Star, Trash2, PhoneCall, MessageCircle } from 'lucide-react';
+import { Filter, Download, Star, Trash2, PhoneCall, MessageCircle, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,9 +30,24 @@ const scoreColor = (score: number) => {
   return 'text-destructive';
 };
 
+const calculateLeadScoreFromData = (lead: any) => {
+  let score = 0;
+  if (lead.phone) score += 10;
+  if (lead.email) score += 5;
+  if (lead.budget) score += 10;
+  if (lead.preferred_location) score += 10;
+  if (lead.status === 'visit_scheduled' || lead.status === 'visit_completed') score += 20;
+  if (lead.status === 'negotiation') score += 15;
+  if (lead.status === 'booked') score += 30;
+  if (lead.first_response_time_min !== null && lead.first_response_time_min <= 5) score += 10;
+  return Math.min(score, 100);
+};
+
 const Leads = () => {
   const [filterSource, setFilterSource] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterAgent, setFilterAgent] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('newest');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedLead, setSelectedLead] = useState<LeadWithRelations | null>(null);
@@ -52,6 +67,14 @@ const Leads = () => {
     .filter(l => {
       if (filterSource !== 'all' && l.source !== filterSource) return false;
       if (filterStatus !== 'all' && l.status !== filterStatus) return false;
+      if (filterAgent !== 'all' && l.assigned_agent_id !== filterAgent) return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = l.name?.toLowerCase().includes(query);
+        const matchesPhone = l.phone?.toLowerCase().includes(query);
+        const matchesLocation = l.preferred_location?.toLowerCase().includes(query);
+        return matchesName || matchesPhone || matchesLocation;
+      }
       return true;
     })
     .sort((a, b) => {
@@ -143,6 +166,16 @@ const Leads = () => {
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <Filter size={13} className="text-muted-foreground" />
+          <div className="relative">
+            <Search size={12} className="absolute left-2.5 top-2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search leads..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="text-2xs bg-card border border-border rounded-xl pl-8 pr-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring/30 w-[180px]"
+            />
+          </div>
           <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
             className="text-2xs bg-card border border-border rounded-xl px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring/30">
             <option value="all">All Sources</option>
@@ -152,6 +185,11 @@ const Leads = () => {
             className="text-2xs bg-card border border-border rounded-xl px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring/30">
             <option value="all">All Stages</option>
             {PIPELINE_STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+          <select value={filterAgent} onChange={e => setFilterAgent(e.target.value)}
+            className="text-2xs bg-card border border-border rounded-xl px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring/30">
+            <option value="all">All Agents</option>
+            {agents?.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
             className="text-2xs bg-card border border-border rounded-xl px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring/30">
@@ -233,8 +271,8 @@ const Leads = () => {
                     </select>
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className={`text-2xs font-semibold flex items-center gap-1 ${scoreColor(lead.lead_score ?? 0)}`}>
-                      <Star size={10} /> {lead.lead_score ?? 0}
+                    <span className={`text-2xs font-semibold flex items-center gap-1 ${scoreColor(calculateLeadScoreFromData(lead))}`}>
+                      <Star size={10} /> {calculateLeadScoreFromData(lead)}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-2xs text-muted-foreground">{lead.agents?.name || 'Unassigned'}</td>

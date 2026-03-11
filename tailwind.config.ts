@@ -76,6 +76,7 @@ export default {
           suggested: "hsl(var(--pipeline-suggested))",
           "visit-scheduled": "hsl(var(--pipeline-visit-scheduled))",
           "visit-completed": "hsl(var(--pipeline-visit-completed))",
+          negotiation: "hsl(var(--pipeline-negotiation))",
           booked: "hsl(var(--pipeline-booked))",
           lost: "hsl(var(--pipeline-lost))",
         },
