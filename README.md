@@ -61,7 +61,7 @@ Follow these steps to run the dashboard application on your local machine.
 ### 1. Clone the Repository
 Open your terminal and clone the repository:
 ```sh
-git clone https://github.com/Vedant294/gharpayy-tasku
+git clone https://github.com/Vedant294/gharpayy-task
 ```
 
 ### 2. Navigate to the Project Directory
