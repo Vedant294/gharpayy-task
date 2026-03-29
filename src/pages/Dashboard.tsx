@@ -4,6 +4,7 @@ import OnboardingCard from '@/components/OnboardingCard';
 import { useDashboardStats, useLeads, useAgentStats, calculateLeadScore } from '@/hooks/useCrmData';
 import { useAllReminders, useCompleteFollowUp } from '@/hooks/useLeadDetails';
 import { useBookingStats } from '@/hooks/useBookings';
+import SampleDataDisplay from '@/components/SampleDataDisplay';
 import { PIPELINE_STAGES, SOURCE_LABELS } from '@/types/crm';
 import { Users, Clock, CalendarCheck, CheckCircle, TrendingUp, AlertTriangle, Timer, Star, IndianRupee } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -14,7 +15,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const PIE_COLORS = [
   'hsl(var(--accent))', 'hsl(var(--info))', 'hsl(var(--destructive))',
@@ -34,6 +35,16 @@ const Dashboard = () => {
   const { data: reminders } = useAllReminders();
   const completeFollowUp = useCompleteFollowUp();
   const qc = useQueryClient();
+  const [showSampleData, setShowSampleData] = useState(false);
+
+  // Load sample data when toggle is enabled
+  useEffect(() => {
+    if (showSampleData) {
+      import('@/lib/seedData').then(({ seedData }) => {
+        seedData();
+      });
+    }
+  }, [showSampleData]);
 
   // Realtime subscription for leads
   useEffect(() => {
@@ -85,6 +96,22 @@ const Dashboard = () => {
 
   return (
     <AppLayout title="Dashboard" subtitle="Real-time overview of your sales pipeline">
+      {/* Sample Data Toggle */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">Show Sample Data</span>
+          <button
+            onClick={() => setShowSampleData(!showSampleData)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${showSampleData ? 'bg-accent' : 'bg-secondary'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showSampleData ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+        {showSampleData && (
+          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">Demo Mode</span>
+        )}
+      </div>
+
       {/* Onboarding */}
       <OnboardingCard />
 
@@ -101,27 +128,41 @@ const Dashboard = () => {
       )}
 
       {/* KPIs */}
-      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={container} initial="hidden" animate="show">
-        <KpiCard title="Total Leads" value={stats?.totalLeads ?? 0} icon={<Users size={17} />} />
-        <KpiCard title="Avg Response Time" value={stats?.avgResponseTime ?? 0} suffix="min" icon={<Clock size={17} />} color="hsl(var(--warning))" />
-        <KpiCard title="Visits Scheduled" value={stats?.visitsScheduled ?? 0} icon={<CalendarCheck size={17} />} color="hsl(173, 55%, 42%)" />
-        <KpiCard title="Bookings Closed" value={stats?.bookingsClosed ?? 0} icon={<CheckCircle size={17} />} color="hsl(var(--success))" />
-      </motion.div>
-      <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" variants={container} initial="hidden" animate="show">
-        <KpiCard title="Conversion Rate" value={stats?.conversionRate ?? 0} suffix="%" icon={<TrendingUp size={17} />} color="hsl(262, 55%, 55%)" />
-        <KpiCard title="SLA Compliance" value={stats?.slaCompliance ?? 0} suffix="%" icon={<Timer size={17} />} color="hsl(var(--info))" />
-        <KpiCard title="New Today" value={stats?.newToday ?? 0} icon={<Users size={17} />} color="hsl(var(--destructive))" />
-        <KpiCard title="SLA Breaches" value={stats?.slaBreaches ?? 0} icon={<AlertTriangle size={17} />} color="hsl(0, 55%, 50%)" />
-      </motion.div>
+      {showSampleData ? (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <SampleDataDisplay />
+        </motion.div>
+      ) : (
+        <>
+          <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" variants={container} initial="hidden" animate="show">
+            <KpiCard title="Total Leads" value={stats?.totalLeads ?? 0} icon={<Users size={17} />} />
+            <KpiCard title="Avg Response Time" value={stats?.avgResponseTime ?? 0} suffix="min" icon={<Clock size={17} />} color="hsl(var(--warning))" />
+            <KpiCard title="Visits Scheduled" value={stats?.visitsScheduled ?? 0} icon={<CalendarCheck size={17} />} color="hsl(173, 55%, 42%)" />
+            <KpiCard title="Bookings Closed" value={stats?.bookingsClosed ?? 0} icon={<CheckCircle size={17} />} color="hsl(var(--success))" />
+          </motion.div>
+          <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" variants={container} initial="hidden" animate="show">
+            <KpiCard title="Conversion Rate" value={stats?.conversionRate ?? 0} suffix="%" icon={<TrendingUp size={17} />} color="hsl(262, 55%, 55%)" />
+            <KpiCard title="SLA Compliance" value={stats?.slaCompliance ?? 0} suffix="%" icon={<Timer size={17} />} color="hsl(var(--info))" />
+            <KpiCard title="New Today" value={stats?.newToday ?? 0} icon={<Users size={17} />} color="hsl(var(--destructive))" />
+            <KpiCard title="SLA Breaches" value={stats?.slaBreaches ?? 0} icon={<AlertTriangle size={17} />} color="hsl(0, 55%, 50%)" />
+          </motion.div>
+        </>
+      )}
 
       {/* Revenue Forecast */}
-      {bookingStats && (bookingStats.revenue > 0 || bookingStats.pendingRevenue > 0) && (
+      {showSampleData ? (
         <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <KpiCard title="Confirmed Revenue" value={`₹${(bookingStats.revenue / 1000).toFixed(0)}k`} icon={<IndianRupee size={17} />} color="hsl(var(--success))" />
-          <KpiCard title="Pipeline Revenue" value={`₹${(bookingStats.pendingRevenue / 1000).toFixed(0)}k`} icon={<TrendingUp size={17} />} color="hsl(var(--warning))" />
-          <KpiCard title="Projected Revenue" value={`₹${((bookingStats.revenue + bookingStats.pendingRevenue * 0.6) / 1000).toFixed(0)}k`} icon={<IndianRupee size={17} />} color="hsl(var(--accent))" />
-          <KpiCard title="Active Bookings" value={bookingStats.confirmed + bookingStats.checkedIn} icon={<CheckCircle size={17} />} color="hsl(var(--info))" />
+          <SampleDataDisplay />
         </motion.div>
+      ) : (
+        bookingStats && (bookingStats.revenue > 0 || bookingStats.pendingRevenue > 0) && (
+          <motion.div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <KpiCard title="Confirmed Revenue" value={`₹${(bookingStats.revenue / 1000).toFixed(0)}k`} icon={<IndianRupee size={17} />} color="hsl(var(--success))" />
+            <KpiCard title="Pipeline Revenue" value={`₹${(bookingStats.pendingRevenue / 1000).toFixed(0)}k`} icon={<TrendingUp size={17} />} color="hsl(var(--warning))" />
+            <KpiCard title="Projected Revenue" value={`₹${((bookingStats.revenue + bookingStats.pendingRevenue * 0.6) / 1000).toFixed(0)}k`} icon={<IndianRupee size={17} />} color="hsl(var(--accent))" />
+            <KpiCard title="Active Bookings" value={bookingStats.confirmed + bookingStats.checkedIn} icon={<CheckCircle size={17} />} color="hsl(var(--info))" />
+          </motion.div>
+        )
       )}
 
       {/* Charts */}

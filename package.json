@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:push": "supabase db push",
+    "db:generate": "supabase db diff --file supabase/migrations/$(date +%Y%m%d%H%M%S)_$(git rev-parse --short HEAD).sql",
+    "functions:deploy": "supabase functions deploy --project-ref kmwugwbbasdjeulkrwiq"
   },
   "dependencies": {
     "@capacitor/cli": "^8.2.0",

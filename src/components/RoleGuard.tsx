@@ -1,13 +1,15 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { type AppRole } from '@/types/rbac';
 
 interface Props {
   children: React.ReactNode;
-  requiredRole?: string;
+  requiredRoles: AppRole[];
+  fallbackPath?: string;
 }
 
-const ProtectedRoute = ({ children, requiredRole }: Props) => {
-  const { user, loading } = useAuth();
+export const RoleGuard = ({ children, requiredRoles, fallbackPath = '/dashboard' }: Props) => {
+  const { user, loading, hasRole } = useAuth();
 
   if (loading) {
     return (
@@ -21,7 +23,11 @@ const ProtectedRoute = ({ children, requiredRole }: Props) => {
     return <Navigate to="/auth" replace />;
   }
 
+  const hasRequiredRole = requiredRoles.some(role => hasRole(role));
+
+  if (!hasRequiredRole) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+
   return <>{children}</>;
 };
-
-export default ProtectedRoute;

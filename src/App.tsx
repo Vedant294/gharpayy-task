@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { RoleGuard } from "@/components/RoleGuard";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Pipeline from "./pages/Pipeline";
@@ -50,22 +51,22 @@ const App = () => (
             {/* Owner-facing portal */}
             <Route path="/owner-portal" element={<OwnerPortal />} />
 
-            {/* Internal CRM routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-            <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
-            <Route path="/visits" element={<ProtectedRoute><Visits /></ProtectedRoute>} />
-            <Route path="/conversations" element={<ProtectedRoute><Conversations /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/historical" element={<ProtectedRoute><Historical /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/owners" element={<ProtectedRoute><Owners /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-            <Route path="/effort" element={<ProtectedRoute><EffortDashboard /></ProtectedRoute>} />
-            <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
-            <Route path="/matching" element={<ProtectedRoute><Matching /></ProtectedRoute>} />
-            <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-            <Route path="/zones" element={<ProtectedRoute><ZoneManagement /></ProtectedRoute>} />
+            {/* Internal CRM routes with role guards */}
+            <Route path="/dashboard" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Dashboard /></RoleGuard></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Leads /></RoleGuard></ProtectedRoute>} />
+            <Route path="/pipeline" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Pipeline /></RoleGuard></ProtectedRoute>} />
+            <Route path="/visits" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Visits /></RoleGuard></ProtectedRoute>} />
+            <Route path="/conversations" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Conversations /></RoleGuard></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager']}><Analytics /></RoleGuard></ProtectedRoute>} />
+            <Route path="/historical" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager']}><Historical /></RoleGuard></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager']}><SettingsPage /></RoleGuard></ProtectedRoute>} />
+            <Route path="/owners" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager']}><Owners /></RoleGuard></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'owner']}><Inventory /></RoleGuard></ProtectedRoute>} />
+            <Route path="/effort" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager']}><EffortDashboard /></RoleGuard></ProtectedRoute>} />
+            <Route path="/availability" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'owner']}><Availability /></RoleGuard></ProtectedRoute>} />
+            <Route path="/matching" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Matching /></RoleGuard></ProtectedRoute>} />
+            <Route path="/bookings" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent', 'owner']}><Bookings /></RoleGuard></ProtectedRoute>} />
+            <Route path="/zones" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager']}><ZoneManagement /></RoleGuard></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
