@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
-  const { demoLogin } = useAuth();
+  const navigate = useNavigate();
+  const { demoLogin, user, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('demo@gharpayy.com');
   const [password, setPassword] = useState('demo1234');
@@ -18,6 +20,13 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demoMode, setDemoMode] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   // Demo users
   const demoUsers = [
@@ -35,6 +44,8 @@ const Auth = () => {
       toast.success(`Welcome ${demoEmail.split('@')[0]}!`);
       setEmail(demoEmail);
       setPassword(demoPassword);
+      // Navigate to dashboard after successful login
+      setTimeout(() => navigate('/dashboard'), 500);
     } else {
       toast.error(result.error || 'Demo login failed');
     }
@@ -45,8 +56,13 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
-    else toast.success('Welcome back!');
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Welcome back!');
+      // Navigate to dashboard after successful login
+      setTimeout(() => navigate('/dashboard'), 500);
+    }
     setLoading(false);
   };
 

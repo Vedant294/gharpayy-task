@@ -58,9 +58,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isDemoUser, setIsDemoUser] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          loadUserRoles(session.user.id);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setRoles([]);
+        setIsDemoUser(false);
+      }
       setLoading(false);
     });
 
@@ -99,49 +109,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const demoLogin = async (email: string, password: string) => {
     const demoUser = DEMO_USERS.find(u => u.email === email && u.password === password);
     
-    if (demoUser) {
-      // Create a temporary session for demo user
-      const { data, error } = await supabase.auth.signInWithPassword({
+    if (!demoUser) {
+      return { success: false, error: 'Invalid credentials' };
+    }
+
+    // Sign in with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: demoUser.email,
+      password: demoUser.password,
+    });
+
+    if (error) {
+      // If user doesn't exist, create them first
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: demoUser.email,
+        password: demoUser.password,
+        options: { data: { full_name: demoUser.name } },
+      });
+
+      if (signUpError && signUpError.message !== 'User already registered') {
+        return { success: false, error: signUpError.message };
+      }
+
+      // Now try to sign in again
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: demoUser.email,
         password: demoUser.password,
       });
 
-      if (error) {
-        // If user doesn't exist in Supabase, create a mock session
-        const mockUser: User = {
-          id: `demo-${demoUser.role}`,
-          email: demoUser.email,
-          email_confirmed_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          app_metadata: {},
-          user_metadata: { name: demoUser.name },
-          aud: 'authenticated',
-          role: 'authenticated',
-        };
+      if (signInError) {
+        return { success: false, error: signInError.message };
+      }
 
-        const mockSession: Session = {
-          access_token: `demo-token-${Date.now()}`,
-          refresh_token: `demo-refresh-${Date.now()}`,
-          expires_in: 3600,
-          expires_at: Date.now() + 3600000,
-          token_type: 'bearer',
-          user: mockUser,
-        };
-
-        setSession(mockSession);
-        setUser(mockUser);
-        setRoles([demoUser.role]);
-        setIsDemoUser(true);
+      if (signInData.user) {
+        // Create user role in database
+        await supabase.from('user_roles').upsert({
+          user_id: signInData.user.id,
+          role: demoUser.role,
+          is_active: true,
+        }, {
+          onConflict: 'user_id',
+        }).select();
         
+        await loadUserRoles(signInData.user.id);
         return { success: true };
       }
 
-      if (data.user) {
-        await loadUserRoles(data.user.id);
-        return { success: true };
-      }
+      return { success: false, error: 'Failed to sign in' };
+    }
 
-      return { success: false, error: 'Invalid credentials' };
+    if (data.user) {
+      // Create user role in database if not exists
+      await supabase.from('user_roles').upsert({
+        user_id: data.user.id,
+        role: demoUser.role,
+        is_active: true,
+      }, {
+        onConflict: 'user_id',
+      }).select();
+      
+      await loadUserRoles(data.user.id);
+      return { success: true };
     }
 
     return { success: false, error: 'Invalid credentials' };
@@ -149,7 +177,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const demoLogout = () => {
     setIsDemoUser(false);
-    setRoles([]);
   };
 
   const hasRole = (role: AppRole) => roles.includes(role);
