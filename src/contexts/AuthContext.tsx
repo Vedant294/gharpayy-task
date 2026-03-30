@@ -31,6 +31,7 @@ interface AuthContextType {
   isOwner: boolean;
   demoLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   demoLogout: () => void;
+  isDemoUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -46,6 +47,7 @@ const AuthContext = createContext<AuthContextType>({
   isOwner: false,
   demoLogin: async () => ({ success: false }),
   demoLogout: () => {},
+  isDemoUser: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -79,7 +81,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Load user roles
       if (session?.user) {
         loadUserRoles(session.user.id);
       }
@@ -113,66 +114,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, error: 'Invalid credentials' };
     }
 
-    // Sign in with Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Create a mock session for demo users
+    const mockUser: User = {
+      id: `demo-${demoUser.role}-${Date.now()}`,
       email: demoUser.email,
-      password: demoUser.password,
-    });
+      email_confirmed_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      app_metadata: {},
+      user_metadata: { name: demoUser.name },
+      aud: 'authenticated',
+      role: 'authenticated',
+    };
 
-    if (error) {
-      // If user doesn't exist, create them first
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: demoUser.email,
-        password: demoUser.password,
-        options: { data: { full_name: demoUser.name } },
-      });
+    const mockSession: Session = {
+      access_token: `demo-token-${Date.now()}`,
+      refresh_token: `demo-refresh-${Date.now()}`,
+      expires_in: 3600,
+      expires_at: Date.now() + 3600000,
+      token_type: 'bearer',
+      user: mockUser,
+    };
 
-      if (signUpError && signUpError.message !== 'User already registered') {
-        return { success: false, error: signUpError.message };
-      }
-
-      // Now try to sign in again
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: demoUser.email,
-        password: demoUser.password,
-      });
-
-      if (signInError) {
-        return { success: false, error: signInError.message };
-      }
-
-      if (signInData.user) {
-        // Create user role in database
-        await supabase.from('user_roles').upsert({
-          user_id: signInData.user.id,
-          role: demoUser.role,
-          is_active: true,
-        }, {
-          onConflict: 'user_id',
-        }).select();
-        
-        await loadUserRoles(signInData.user.id);
-        return { success: true };
-      }
-
-      return { success: false, error: 'Failed to sign in' };
-    }
-
-    if (data.user) {
-      // Create user role in database if not exists
-      await supabase.from('user_roles').upsert({
-        user_id: data.user.id,
-        role: demoUser.role,
-        is_active: true,
-      }, {
-        onConflict: 'user_id',
-      }).select();
-      
-      await loadUserRoles(data.user.id);
-      return { success: true };
-    }
-
-    return { success: false, error: 'Invalid credentials' };
+    setSession(mockSession);
+    setUser(mockUser);
+    setRoles([demoUser.role]);
+    setIsDemoUser(true);
+    
+    return { success: true };
   };
 
   const demoLogout = () => {
@@ -201,6 +169,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isOwner,
         demoLogin,
         demoLogout,
+        isDemoUser,
       }}
     >
       {children}
