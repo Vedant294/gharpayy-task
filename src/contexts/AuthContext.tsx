@@ -3,6 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import type { AppRole } from '@/types/rbac';
 
+interface DemoUser {
+  email: string;
+  password: string;
+  role: AppRole;
+  name: string;
+}
+
+const DEMO_USERS: DemoUser[] = [
+  { email: 'admin@gharpayy.com', password: 'admin123', role: 'admin', name: 'Admin User' },
+  { email: 'manager@gharpayy.com', password: 'manager123', role: 'manager', name: 'Manager User' },
+  { email: 'agent@gharpayy.com', password: 'agent123', role: 'agent', name: 'Agent User' },
+  { email: 'owner@gharpayy.com', password: 'owner123', role: 'owner', name: 'Owner User' },
+  { email: 'viewer@gharpayy.com', password: 'viewer123', role: 'viewer', name: 'Viewer User' },
+];
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -14,6 +29,8 @@ interface AuthContextType {
   isManager: boolean;
   isAgent: boolean;
   isOwner: boolean;
+  demoLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  demoLogout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -27,6 +44,8 @@ const AuthContext = createContext<AuthContextType>({
   isManager: false,
   isAgent: false,
   isOwner: false,
+  demoLogin: async () => ({ success: false }),
+  demoLogout: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -36,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [isDemoUser, setIsDemoUser] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -73,6 +93,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setIsDemoUser(false);
+  };
+
+  const demoLogin = async (email: string, password: string) => {
+    const demoUser = DEMO_USERS.find(u => u.email === email && u.password === password);
+    
+    if (demoUser) {
+      // Create a temporary session for demo user
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: demoUser.email,
+        password: demoUser.password,
+      });
+
+      if (error) {
+        // If user doesn't exist in Supabase, create a mock session
+        const mockUser: User = {
+          id: `demo-${demoUser.role}`,
+          email: demoUser.email,
+          email_confirmed_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          app_metadata: {},
+          user_metadata: { name: demoUser.name },
+          aud: 'authenticated',
+          role: 'authenticated',
+        };
+
+        const mockSession: Session = {
+          access_token: `demo-token-${Date.now()}`,
+          refresh_token: `demo-refresh-${Date.now()}`,
+          expires_in: 3600,
+          expires_at: Date.now() + 3600000,
+          token_type: 'bearer',
+          user: mockUser,
+        };
+
+        setSession(mockSession);
+        setUser(mockUser);
+        setRoles([demoUser.role]);
+        setIsDemoUser(true);
+        
+        return { success: true };
+      }
+
+      if (data.user) {
+        await loadUserRoles(data.user.id);
+        return { success: true };
+      }
+
+      return { success: false, error: 'Invalid credentials' };
+    }
+
+    return { success: false, error: 'Invalid credentials' };
+  };
+
+  const demoLogout = () => {
+    setIsDemoUser(false);
+    setRoles([]);
   };
 
   const hasRole = (role: AppRole) => roles.includes(role);
@@ -95,6 +172,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isManager,
         isAgent,
         isOwner,
+        demoLogin,
+        demoLogout,
       }}
     >
       {children}

@@ -5,32 +5,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
+  const { demoLogin } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('demo@gharpayy.com');
   const [password, setPassword] = useState('demo1234');
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
-  // Auto-create demo account on first visit
-  const ensureDemoAccount = async () => {
-    const { error } = await supabase.auth.signUp({
-      email: 'demo@gharpayy.com',
-      password: 'demo1234',
-      options: { data: { full_name: 'Demo User' } },
-    });
-    // Ignore if already exists
+  // Demo users
+  const demoUsers = [
+    { email: 'admin@gharpayy.com', password: 'admin123', role: 'Admin' },
+    { email: 'manager@gharpayy.com', password: 'manager123', role: 'Manager' },
+    { email: 'agent@gharpayy.com', password: 'agent123', role: 'Agent' },
+    { email: 'owner@gharpayy.com', password: 'owner123', role: 'Owner' },
+    { email: 'viewer@gharpayy.com', password: 'viewer123', role: 'Viewer' },
+  ];
+
+  const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
+    setLoading(true);
+    const result = await demoLogin(demoEmail, demoPassword);
+    if (result.success) {
+      toast.success(`Welcome ${demoEmail.split('@')[0]}!`);
+      setEmail(demoEmail);
+      setPassword(demoPassword);
+    } else {
+      toast.error(result.error || 'Demo login failed');
+    }
+    setLoading(false);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Ensure demo account exists first
-    if (email === 'demo@gharpayy.com') await ensureDemoAccount();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) toast.error(error.message);
     else toast.success('Welcome back!');
@@ -125,7 +138,7 @@ const Auth = () => {
       {/* Right auth form */}
       <div className="flex-1 flex items-center justify-center p-6">
         <motion.div
-          className="w-full max-w-[380px]"
+          className="w-full max-w-[420px]"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
@@ -140,9 +153,36 @@ const Auth = () => {
           <h2 className="font-display font-bold text-xl text-foreground mb-1 tracking-tight">
             {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Create account' : 'Reset password'}
           </h2>
-          <p className="text-xs text-muted-foreground mb-8">
+          <p className="text-xs text-muted-foreground mb-6">
             {mode === 'login' ? 'Sign in to your CRM dashboard' : mode === 'signup' ? 'Join your team on Gharpayy' : 'Enter your email to reset password'}
           </p>
+
+          {/* Demo Login Section */}
+          {!demoMode && mode === 'login' && (
+            <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <LogIn size={16} className="text-indigo-500" />
+                  <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Demo Login</span>
+                </div>
+                <button onClick={() => setDemoMode(true)} className="text-xs text-indigo-500 hover:underline">Use Demo</button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Try with pre-configured accounts</p>
+              <div className="space-y-2">
+                {demoUsers.map((user) => (
+                  <button
+                    key={user.email}
+                    onClick={() => handleDemoLogin(user.email, user.password)}
+                    disabled={loading}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-background border border-border hover:border-indigo-500/50 transition-colors text-xs"
+                  >
+                    <span className="text-muted-foreground">{user.email}</span>
+                    <span className="text-success font-medium">{user.role}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {mode !== 'forgot' && (
             <>

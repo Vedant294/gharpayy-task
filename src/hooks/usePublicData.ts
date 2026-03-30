@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { mockProperties, mockLandmarks } from '@/data/mockData';
 
 export interface PropertyFilters {
   city?: string;
@@ -19,27 +20,21 @@ export function usePublicProperties(filters: PropertyFilters = {}) {
   return useQuery({
     queryKey: ['public-properties', filters],
     queryFn: async () => {
-      let q = supabase
-        .from('properties')
-        .select('*, owners:owner_id(name), rooms(id, room_number, room_type, bed_count, rent_per_bed, expected_rent, status, floor, furnishing, bathroom_type, amenities, beds(id, bed_number, status, current_rent))')
-        .eq('is_active', true)
-        .order('rating', { ascending: false, nullsFirst: false });
-
-      if (filters.city) q = q.ilike('city', `%${filters.city}%`);
-      if (filters.area) q = q.ilike('area', `%${filters.area}%`);
-      if (filters.gender && filters.gender !== 'any') q = q.eq('gender_allowed', filters.gender);
-
-      const page = filters.page || 0;
-      const limit = filters.limit || 50;
-      q = q.range(page * limit, (page + 1) * limit - 1);
-
-      const { data, error } = await q;
-      if (error) throw error;
-
-      // Client-side filtering for budget and sharing type
-      let results = data || [];
+      // Use mock data for demo purposes
+      let results = [...mockProperties];
+      
+      // Apply filters
+      if (filters.city) {
+        results = results.filter(p => p.city?.toLowerCase().includes(filters.city!.toLowerCase()));
+      }
+      if (filters.area) {
+        results = results.filter(p => p.area?.toLowerCase().includes(filters.area!.toLowerCase()));
+      }
+      if (filters.gender && filters.gender !== 'any') {
+        results = results.filter(p => p.gender_allowed === filters.gender || p.gender_allowed === 'any');
+      }
       if (filters.budgetMax) {
-        results = results.filter((p: any) => {
+        results = results.filter(p => {
           const rents = (p.rooms || []).map((r: any) => r.rent_per_bed || r.expected_rent).filter(Boolean);
           if (!rents.length) return true;
           return Math.min(...rents) <= filters.budgetMax!;
@@ -48,10 +43,11 @@ export function usePublicProperties(filters: PropertyFilters = {}) {
       if (filters.sharingTypes?.length) {
         const sharingMap: Record<string, number> = { 'Private': 1, '2 Sharing': 2, '3 Sharing': 3, '4 Sharing': 4 };
         const bedCounts = filters.sharingTypes.map(s => sharingMap[s]).filter(Boolean);
-        results = results.filter((p: any) =>
+        results = results.filter(p =>
           (p.rooms || []).some((r: any) => bedCounts.includes(r.bed_count))
         );
       }
+      
       return results;
     },
   });
@@ -62,6 +58,11 @@ export function usePublicProperty(propertyId: string | undefined) {
     queryKey: ['public-property', propertyId],
     enabled: !!propertyId,
     queryFn: async () => {
+      // Use mock data for demo purposes
+      const property = mockProperties.find(p => p.id === propertyId);
+      if (property) return property;
+      
+      // Fallback to Supabase if not found in mock
       const { data, error } = await supabase
         .from('properties')
         .select('*, owners:owner_id(name, phone), rooms(*, beds(*))')
@@ -78,19 +79,19 @@ export function useSimilarProperties(area?: string | null, city?: string | null,
     queryKey: ['similar-properties', area, city, excludeId],
     enabled: !!(area || city),
     queryFn: async () => {
-      let q = supabase
-        .from('properties')
-        .select('id, name, area, city, photos, rating, price_range, is_verified, rooms(id, rent_per_bed, expected_rent, beds(id, status))')
-        .eq('is_active', true)
-        .limit(6);
-
-      if (area) q = q.ilike('area', `%${area}%`);
-      else if (city) q = q.ilike('city', `%${city}%`);
-      if (excludeId) q = q.neq('id', excludeId);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data;
+      let results = [...mockProperties];
+      
+      if (area) {
+        results = results.filter(p => p.area?.toLowerCase().includes(area.toLowerCase()));
+      } else if (city) {
+        results = results.filter(p => p.city?.toLowerCase().includes(city.toLowerCase()));
+      }
+      
+      if (excludeId) {
+        results = results.filter(p => p.id !== excludeId);
+      }
+      
+      return results.slice(0, 6);
     },
   });
 }
@@ -99,12 +100,8 @@ export function useAvailableCities() {
   return useQuery({
     queryKey: ['available-cities'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('city')
-        .eq('is_active', true);
-      if (error) throw error;
-      return [...new Set(data.map(p => p.city).filter(Boolean))] as string[];
+      const cities = [...new Set(mockProperties.map(p => p.city).filter(Boolean))];
+      return cities;
     },
   });
 }
@@ -113,11 +110,14 @@ export function useAvailableAreas(city?: string) {
   return useQuery({
     queryKey: ['available-areas', city],
     queryFn: async () => {
-      let q = supabase.from('properties').select('area').eq('is_active', true);
-      if (city) q = q.ilike('city', `%${city}%`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return [...new Set(data.map(p => p.area).filter(Boolean))] as string[];
+      let areas = mockProperties.map(p => p.area).filter(Boolean);
+      if (city) {
+        areas = mockProperties
+          .filter(p => p.city?.toLowerCase().includes(city.toLowerCase()))
+          .map(p => p.area)
+          .filter(Boolean);
+      }
+      return [...new Set(areas)] as string[];
     },
   });
 }
@@ -126,11 +126,11 @@ export function useLandmarks(city?: string) {
   return useQuery({
     queryKey: ['landmarks', city],
     queryFn: async () => {
-      let q = supabase.from('landmarks').select('*');
-      if (city) q = q.ilike('city', `%${city}%`);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data;
+      let landmarks = [...mockLandmarks];
+      if (city) {
+        landmarks = landmarks.filter(l => l.city?.toLowerCase().includes(city.toLowerCase()));
+      }
+      return landmarks;
     },
   });
 }
