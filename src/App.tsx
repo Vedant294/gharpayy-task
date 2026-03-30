@@ -29,7 +29,6 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import OwnerPortal from "./pages/OwnerPortal";
 import NotFound from "./pages/NotFound";
-import SubscriptionPage from "./pages/Subscription";
 
 const queryClient = new QueryClient();
 
@@ -51,9 +50,6 @@ const App = () => (
 
             {/* Owner-facing portal */}
             <Route path="/owner-portal" element={<OwnerPortal />} />
-
-            {/* Subscription routes */}
-            <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
 
             {/* Internal CRM routes with role guards */}
             <Route path="/dashboard" element={<ProtectedRoute><RoleGuard requiredRoles={['admin', 'manager', 'agent']}><Dashboard /></RoleGuard></ProtectedRoute>} />

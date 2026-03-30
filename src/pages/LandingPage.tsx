@@ -6,8 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { usePublicProperties } from '@/hooks/usePublicData';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import ParticleBackground from '@/components/ui/particle-background';
-import GradientCard from '@/components/ui/gradient-card';
 
 const CITIES = [
   { name: 'Bangalore', tagline: '300+ PGs', active: true },
@@ -20,10 +18,10 @@ const CITIES = [
 const POPULAR_AREAS = ['Marathahalli', 'Whitefield', 'Koramangala', 'BTM Layout', 'HSR Layout', 'Electronic City', 'Bellandur', 'Indiranagar', 'Sarjapur Road'];
 
 const STATS = [
-  { value: '300+', label: 'Verified Properties', icon: <Building2 size={20} />, gradient: 'purple' },
-  { value: '5,000+', label: 'Happy Residents', icon: <Users size={20} />, gradient: 'blue' },
-  { value: '12', label: 'Bangalore Areas', icon: <MapPin size={20} />, gradient: 'green' },
-  { value: '4.6', label: 'Average Rating', icon: <Star size={20} />, gradient: 'orange' },
+  { value: '300+', label: 'Verified Properties', icon: <Building2 size={20} /> },
+  { value: '5,000+', label: 'Happy Residents', icon: <Users size={20} /> },
+  { value: '12', label: 'Bangalore Areas', icon: <MapPin size={20} /> },
+  { value: '4.6', label: 'Average Rating', icon: <Star size={20} /> },
 ];
 
 export default function LandingPage() {
@@ -196,13 +194,13 @@ export default function LandingPage() {
                 transition={{ delay: 0.3 + i * 0.1 }}
                 className="text-center"
               >
-                <GradientCard gradient={stat.gradient as any} className="p-6 hover:scale-105 transition-transform duration-300">
+                <div className="inline-block p-6 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 hover:scale-105 transition-transform duration-300">
                   <div className="flex justify-center mb-3 text-foreground/50">
                     {stat.icon}
                   </div>
                   <p className="text-3xl sm:text-4xl font-bold text-foreground bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/70">{stat.value}</p>
                   <p className="text-xs text-muted-foreground mt-2 font-medium">{stat.label}</p>
-                </GradientCard>
+                </div>
               </motion.div>
             ))}
           </div>
